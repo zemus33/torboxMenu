@@ -257,10 +257,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func selectCDN(_ sender: NSMenuItem) {
-        guard let value = sender.representedObject as? String, let session = session else { return }
+        guard let value = sender.representedObject as? String else { return }
         Task {
             do {
-                try await setCDN(session: session, value: value)
+                try await ensureSession()
+                try await setCDN(session: session!, value: value)
                 self.currentCDN = value
                 await MainActor.run { self.buildMenu() }
             } catch {
@@ -271,6 +272,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     a.runModal()
                 }
             }
+        }
+    }
+
+    func ensureSession() async throws {
+        if let creds = keychainLoad() {
+            session = try await authenticate(email: creds.email, password: creds.password)
+        } else {
+            throw NSError(domain: "auth", code: 3, userInfo: [NSLocalizedDescriptionKey: "Not logged in"])
         }
     }
 
