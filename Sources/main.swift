@@ -1,5 +1,6 @@
 import AppKit
 import Security
+import ServiceManagement
 
 // MARK: - Constants
 
@@ -207,6 +208,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         menu.addItem(NSMenuItem.separator())
+        let launchAtLogin = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
+        launchAtLogin.target = self
+        launchAtLogin.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.addItem(launchAtLogin)
         let quit = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
 
@@ -285,6 +290,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func refresh() {
         Task { await autoLogin() }
+    }
+
+    @objc func toggleLaunchAtLogin(_ sender: NSMenuItem) {
+        do {
+            if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
+            } else {
+                try SMAppService.mainApp.register()
+            }
+        } catch {
+            let a = NSAlert()
+            a.messageText = "Error"
+            a.informativeText = error.localizedDescription
+            a.runModal()
+        }
+        buildMenu()
     }
 
     @objc func logout() {
